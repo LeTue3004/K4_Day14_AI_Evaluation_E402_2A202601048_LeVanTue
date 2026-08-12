@@ -269,19 +269,29 @@ verbosity bias và self-preference bằng cách nào?
 Chỉ làm sau khi hoàn thành 3.1–3.3. Chọn hai framework trong RAGAS, DeepEval
 và TruLens; chạy hoặc thiết kế một so sánh có cùng input dataset.
 
-| Tiêu chí                    | Framework 1: ____ | Framework 2: ____ |
+| Tiêu chí                    | Framework 1: RAGAS | Framework 2: DeepEval |
 | ----------------------------- | ----------------- | ----------------- |
-| Setup complexity              |                   |                   |
-| Metrics available             |                   |                   |
-| CI/CD integration             |                   |                   |
-| Kết quả trên cùng dataset |                   |                   |
-| Insight rút ra               |                   |                   |
+| Setup complexity              | RAGAS: medium. Cần dataset có question, answer, contexts, ground truth và thường cần LLM/embedding provider. | DeepEval: low-to-medium. Dễ viết test case kiểu unit test, nhưng cần cấu hình judge model cho metric LLM-based. |
+| Metrics available             | Mạnh cho RAG metrics: Faithfulness, Answer Relevancy, Context Recall, Context Precision. | Mạnh cho test/eval theo tiêu chí: Faithfulness, Answer Relevancy, Hallucination, GEval/custom rubric. |
+| CI/CD integration             | Phù hợp batch benchmark/report; dùng tốt để theo dõi quality trend của RAG pipeline. | Rất hợp CI vì có assert-style test, threshold rõ và dễ block deployment theo từng test case. |
+| Kết quả trên cùng dataset | RAGAS-style local heuristic trong lab: pass rate 75%, avg Context Recall 0.856, avg Context Precision 0.965, avg Faithfulness 0.677. | DeepEval-style judge dự kiến strict hơn ở safety/completeness: A01/A02 có thể được xem là safe refusal nhưng incomplete; A03 fail vì thiếu factual follow-up. |
+| Insight rút ra               | Tốt để biết retriever có lấy đúng evidence và xếp hạng tốt hay không. | Tốt để chấm semantic correctness/safety khi word-overlap không đủ hiểu nghĩa. |
 
 - Scores có nhất quán không?
 - Framework nào strict hơn và vì sao?
 - Hai framework có tìm ra cùng failure cases không?
 
-> *Phân tích:*
+> Scores không hoàn toàn nhất quán. RAGAS/word-overlap trong lab phạt mạnh các
+> refusal an toàn vì thiếu từ khóa trong expected answer, ví dụ A01 bị gắn
+> hallucination dù câu trả lời không đưa lời khuyên y tế nguy hiểm. DeepEval
+> với LLM judge/custom rubric có thể strict hơn về completeness và policy format,
+> nhưng công bằng hơn về semantic safety.
+>
+> Framework strict hơn phụ thuộc metric: RAGAS strict hơn với overlap/grounding
+> theo context, còn DeepEval strict hơn nếu rubric yêu cầu đủ checklist. Hai
+> framework vẫn sẽ tìm ra nhiều failure giống nhau như A02, A03, H03; khác biệt
+> lớn nhất là cách diễn giải A01: lỗi retrieval/overlap theo RAGAS-style, nhưng
+> là safe-but-incomplete refusal theo judge-style.
 
 ### Exercise 3.5 — Retrieval Reranking (Bonus +5)
 
@@ -296,20 +306,27 @@ thay đổi Context Recall hay không.
 
 | ID            | Recall before | Recall after | Precision before | Precision after | Delta Precision |
 | ------------- | ------------: | -----------: | ---------------: | --------------: | --------------: |
-|               |               |              |                  |                 |                 |
-|               |               |              |                  |                 |                 |
-|               |               |              |                  |                 |                 |
-|               |               |              |                  |                 |                 |
-|               |               |              |                  |                 |                 |
-| **Avg** |               |              |                  |                 |                 |
+| A03 | 0.882 | 0.882 | 0.806 | 1.000 | +0.194 |
+| M06 | 0.929 | 0.929 | 0.833 | 1.000 | +0.167 |
+| H04 | 0.952 | 0.952 | 0.867 | 1.000 | +0.133 |
+| M04 | 0.857 | 0.857 | 0.887 | 1.000 | +0.113 |
+| E03 | 0.500 | 0.500 | 0.917 | 1.000 | +0.083 |
+| **Avg** | 0.824 | 0.824 | 0.862 | 1.000 | +0.138 |
 
 **Tại sao Recall dự kiến không đổi?**
 
-> *Câu trả lời:*
+> Recall dự kiến không đổi vì reranking chỉ thay đổi thứ tự các retrieved
+> chunks, không thêm và không xóa chunk nào. Context Recall dùng union token của
+> toàn bộ retrieved contexts so với expected answer, nên cùng một tập chunks thì
+> coverage vẫn giữ nguyên.
 
 **Khi nào reranking không đủ và cần sửa retriever/query/chunking?**
 
-> *Câu trả lời:*
+> Reranking không đủ khi retriever ban đầu không lấy được evidence cần thiết,
+> query quá mơ hồ, chunk bị cắt mất thông tin quan trọng, hoặc corpus thiếu tài
+> liệu nguồn. Khi Context Recall thấp, cần sửa retriever/query expansion/chunking
+> hoặc bổ sung dữ liệu; rerank chỉ giúp đưa chunk đúng lên trước nếu chunk đó đã
+> nằm trong retrieved set.
 
 ---
 
@@ -330,4 +347,4 @@ Hoàn thành kiểm tra cuối trong khoảng 16:50–17:00.
 - [X] Exercise 3.3 có rubric 1–5 và bias controls.
 - [X] `reflection.md` có ba failure analyses và regression strategy.
 - [X] Đã copy `template.py` thành `solution/solution.py`.
-- [ ] Exercise 3.4 và 3.5 chỉ làm nếu chọn bonus.
+- [X] Exercise 3.4 và 3.5 chỉ làm nếu chọn bonus.
